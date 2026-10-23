@@ -7,8 +7,9 @@ const LEVEL_INFO = {
   C1:{name:"Advanced", d:"You use English fluently and flexibly for work, study and social life."},
   C2:{name:"Proficiency", d:"You understand virtually everything and express fine shades of meaning."}
 };
-// Guided study hours to move up one level (indicative, in line with Cambridge guidance).
-const HOURS = {B1:180, B2:200, C1:220, C2:260};
+// Study hours to move up one level: the lower end of Cambridge's guided-learning-hours ranges,
+// since the plan adds daily self-study and exposure on top.
+const HOURS = {B1:170, B2:180, C1:200, C2:300};
 const WORDS = {B1:"120-150", B2:"140-190", C1:"220-260", C2:"280-320"};
 const LISTEN = {
   B1:[{n:"BBC Learning English: 6 Minute English",u:"https://www.bbc.co.uk/learningenglish/english/features/6-minute-english"},{n:"VOA Learning English",u:"https://learningenglish.voanews.com"},{n:"Luke's English Podcast",u:"https://teacherluke.co.uk"},{n:"TED-Ed on YouTube",u:"https://www.youtube.com/@TEDEd"}],
@@ -78,6 +79,11 @@ function buildPlan(p){
   });
   return {stages, weeks, days: weeks.length*7};
 }
+function milestones(plan, start){
+  let w = 0;
+  return plan.stages.map(st => { const n = plan.weeks.filter(x => x.stage===st).length; w += n; return {stage:st, weeks:n, cum:w, date:addDays(start, w*7-1)}; });
+}
+function dur(w){ if (w <= 10) return w + " weeks"; const m = Math.round(w/4.345); return m <= 24 ? m + " months" : "about " + (Math.round(w/52*2)/2) + " years"; }
 const P = () => S.profile;
 function startDate(){ return parse(S.profile?.start || S.start || nextMonday()); }
 function realDay(){ return diffDays(today(), startDate()) + 1; }
@@ -197,13 +203,18 @@ function vOnboarding(){
     <div class="choices">${[["cambridge","Cambridge English","B1 Preliminary, B2 First, C1 Advanced, C2 Proficiency"],["ielts","IELTS","Academic or General Training"],["none","No exam","Practice tests are still used to measure progress"]].map(e=>`<button class="choice" data-exam="${e[0]}" aria-pressed="${d.exam===e[0]}"><span class="code">${e[0]==="none"?"–":e[0][0].toUpperCase()}</span><span><b>${e[1]}</b><span>${e[2]}</span></span></button>`).join("")}</div>
     <label class="f" style="margin-top:18px">Start date<input type="date" id="ob-start" value="${esc(d.start)}"></label>${nav("See my plan")}`;
   if (ob.step === 5){
-    const plan = buildPlan(d), end = addDays(parse(d.start), plan.days-1), hours = Math.round(plan.weeks.length*d.minutes*d.days/60);
-    body = `<div class="eyebrow">Your plan</div><h1>${esc(d.from)} → ${esc(d.to)} in ${plan.weeks.length} weeks</h1>
+    const plan = buildPlan(d), ms = milestones(plan, parse(d.start)), first = ms[0], hours = Math.round(plan.weeks.length*d.minutes*d.days/60);
+    const ti = TIME_OPTIONS.indexOf(d.minutes), alts = [];
+    if (ti < TIME_OPTIONS.length-1) alts.push([TIME_OPTIONS[ti+1], d.days]);
+    if (d.days < 7) alts.push([d.minutes, 7]);
+    if (ti < TIME_OPTIONS.length-1 && d.days < 7) alts.push([TIME_OPTIONS[ti+1], 7]);
+    const mins = m => m<60 ? m+" min" : (m/60)+" h";
+    body = `<div class="eyebrow">Your plan</div><h1>First milestone: ${first.stage} in ${dur(first.weeks)}</h1>
+    <p class="sub">${ms.length>1 ? `Then on to ${esc(d.to)}, one level at a time. Each level is a real achievement in itself.` : `That's your goal level.`} You'll notice progress long before the finish line.</p>
     <div class="track">${LEVELS.map(l=>`<div class="seg ${l===d.from?"start":""} ${plan.stages.includes(l)?"in":""}">${l}</div>`).join("")}</div>
-    <div class="summary"><div><b>${plan.weeks.length} weeks</b><span>${plan.stages.map(s=>s+": "+plan.weeks.filter(w=>w.stage===s).length+" wk").join(" · ")}</span></div>
-    <div><b>${d.minutes<60?d.minutes+" min":(d.minutes/60)+" h"} × ${d.days}</b><span>per week, about ${hours} hours in total</span></div>
-    <div><b>${fmt(end,{day:"numeric",month:"short",year:"numeric"})}</b><span>estimated finish, starting ${fmt(parse(d.start),{day:"numeric",month:"short"})}</span></div></div>
-    ${plan.weeks.length > 52 ? `<p class="small muted" style="margin-top:12px">That's a long road. More time per day, or a closer goal, will shorten it a lot.</p>` : ""}
+    <div class="milestones">${ms.map((m,i)=>`<div class="ms"><span class="code">${m.stage}</span><span><b>${LEVEL_INFO[m.stage].name}</b><span>${i===0?"in "+dur(m.weeks):dur(m.weeks)+" more"} · by ${fmt(m.date,{month:"long",year:"numeric"})}</span></span></div>`).join("")}</div>
+    <p class="small muted" style="margin:12px 0 0">${mins(d.minutes)} a day, ${d.days} days a week: about ${hours} hours in total, starting ${fmt(parse(d.start),{day:"numeric",month:"short"})}.</p>
+    ${alts.length ? `<div class="panel" style="margin-top:16px"><h3>Want to get there sooner?</h3><p class="muted small" style="margin:4px 0 10px">Tap an option to switch to it.</p><div class="choices" style="margin-top:0">${alts.map(([m,dd])=>{ const w = buildPlan(Object.assign({}, d, {minutes:m, days:dd})).weeks.length, saved = plan.weeks.length - w; return `<button class="choice simple" data-whatif="${m},${dd}"><b>${mins(m)} × ${dd} days → ${esc(d.to)} in ${dur(w)}</b><span>${dur(saved)} sooner</span></button>`; }).join("")}</div></div>` : ""}
     ${nav(S.profile ? "Save changes" : "Start my plan")}`;
   }
   return `<div class="ob">${bar}${body}</div>`;
@@ -250,9 +261,11 @@ function vToday(){
   const rd = realDay(), weekNo = Math.floor((curDay()-1)/7)+1, end = dateOf(PLAN.days);
   let full = 0; for (let i=1; i<=PLAN.days; i++){ const [a,b] = dayCount(i); if (b && a===b) full++; }
   const studyDays = Math.round(PLAN.days*p.days/7);
+  const ms = milestones(PLAN, startDate()), next = ms.find(m => m.cum >= weekNo) || ms[ms.length-1];
   const hero = `<section class="hero"><div><div class="eyebrow">${rd<1 ? "Starting "+fmt(startDate()) : greeting()+(p.name?", "+esc(p.name):"")}</div>
-    <h1>${esc(p.from)} → ${esc(p.to)}</h1></div>${track()}
-    <div class="kpis"><div class="kpi"><b>${weekNo}/${PLAN.weeks.length}</b><span>week</span></div><div class="kpi"><b>${Math.round(full/studyDays*100)}%</b><span>days completed</span></div><div class="kpi"><b>${fmt(end,{day:"numeric",month:"short"})}</b><span>target finish</span></div></div></section>`;
+    <h1>Next stop: ${next.stage}</h1></div>${track()}
+    <div class="kpis"><div class="kpi"><b>${fmt(next.date,{month:"short",year:"numeric"})}</b><span>${next.stage} reached</span></div><div class="kpi"><b>${weekNo}/${PLAN.weeks.length}</b><span>week</span></div><div class="kpi"><b>${Math.round(full/studyDays*100)}%</b><span>days completed</span></div></div>
+    ${ms.length>1 ? `<div class="small" style="opacity:.8">Then ${ms.filter(m=>m.cum>next.cum).map(m=>m.stage+" by "+fmt(m.date,{month:"short",year:"numeric"})).join(", ")}.</div>` : ""}</section>`;
   const head = `<div class="daybar"><div><div class="eyebrow">Week ${Math.floor((d-1)/7)+1} · ${wk.stage} track · ${DOW[dow]}</div><h2>Day ${d} <span class="muted" style="font:500 15px var(--f-body)">${fmt(dateOf(d),{day:"numeric",month:"long"})}</span></h2></div>
     <div class="nav"><button data-day="${d-1}" ${d<=1?"disabled":""} aria-label="Previous day">‹</button><button data-day="${curDay()}">Today</button><button data-day="${d+1}" ${d>=PLAN.days?"disabled":""} aria-label="Next day">›</button></div></div>`;
   if (!T.length) return hero + head + `<div class="panel rest"><h3>Rest day</h3><p class="muted">No tasks today. If you feel like it, watch something you enjoy in English or chat with a friend.</p></div>`;
@@ -382,6 +395,7 @@ document.addEventListener("click", e => {
     if (ds.to){ ob.d.to = ds.to; render(); return; }
     if (ds.min){ ob.d.minutes = +ds.min; render(); return; }
     if (ds.days){ ob.d.days = +ds.days; render(); return; }
+    if (ds.whatif){ const [m,dd] = ds.whatif.split(",").map(Number); ob.d.minutes = m; ob.d.days = dd; render(); return; }
     if (ds.exam){ ob.d.exam = ds.exam; const v = document.getElementById("ob-start").value; if (v) ob.d.start = v; render(); return; }
     return;
   }

@@ -1,5 +1,5 @@
 // Offline support: app files are cached on first visit and refreshed in the background.
-const CACHE = "ascent-v4";
+const CACHE = "ascent-v5";
 const APP = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "css/app.css", "js/stages.js", "js/b1.js", "js/b2.js", "js/c1.js", "js/c2.js", "js/leveltest.js", "js/app.js"];
 
 self.addEventListener("install", e => {
