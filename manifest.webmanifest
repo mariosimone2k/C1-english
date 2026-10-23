@@ -1,0 +1,15 @@
+{
+  "name": "Percorso C1 Inglese",
+  "short_name": "Percorso C1",
+  "description": "Programma di 16 settimane per arrivare al C1 di inglese.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f7",
+  "theme_color": "#c22a3d",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

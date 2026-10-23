@@ -1,9 +1,18 @@
 <!doctype html>
 <html lang="it">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}</style></head>
-<body>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Percorso C1 Inglese</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Programma di 16 settimane per arrivare al C1 di inglese, 2 ore al giorno.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#c22a3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Percorso C1">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>body{margin:0}[hidden]{display:none!important}</style></head>
+<body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -503,6 +512,7 @@ function vInfo(){
   <li>Il calendario mostra il completamento: verde = giornata completa.</li>
   <li>Flashcard, grammatica, lessico, scrittura e progressi funzionano anche offline. Ascolto, lettura e test d'esame richiedono internet perché rimandano a siti esterni.</li>
   <li>I tuoi progressi restano salvati in questo browser, su questo dispositivo. Per spostarli su un altro dispositivo usa il backup qui sotto.</li></ul></div>
+  <div class="panel"><h3>Installa l'app sul telefono</h3><ul class="clean"><li><b>iPhone</b>: apri il sito in Safari, premi Condividi e poi "Aggiungi alla schermata Home".</li><li><b>Android</b>: apri il sito in Chrome, premi il menu ⋮ e poi "Installa app" (o "Aggiungi a schermata Home").</li><li>Dopo la prima apertura l'app funziona anche senza connessione. Usa sempre l'icona: su iPhone l'app installata e Safari salvano i progressi separatamente.</li></ul></div>
   <div class="panel"><h3>Backup</h3><p class="muted" style="margin:4px 0 10px">Copia il codice e conservalo (per esempio in una nota). Per ripristinare, incollalo qui e premi Ripristina.</p>
   <textarea id="bk" style="min-height:110px;font-family:var(--f-mono);font-size:12px"></textarea>
   <div class="row" style="justify-content:flex-start;margin-top:8px"><button data-export>Genera e copia il backup</button><button data-import>Ripristina dal codice</button></div></div>
@@ -571,6 +581,8 @@ document.addEventListener("input", e => {
   if (t.id === "errors"){ S.errors = t.value; save(); }
 });
 render();
+if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
 </script>
 
 </body>
