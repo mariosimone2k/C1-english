@@ -178,8 +178,10 @@ function vOnboarding(){
   let body = "";
   if (ob.step === 0) body = `<div class="eyebrow">Welcome</div><h1>Build your English plan</h1><p class="sub">Tell us where you are, where you want to get to and how much time you have. You get a day-by-day programme with lessons, flashcards, writing tasks and progress checks.</p>
     <label class="f">Your first name<input id="ob-name" value="${esc(d.name)}" placeholder="e.g. Mario" autocomplete="given-name"></label>${nav("Get started")}`;
-  if (ob.step === 1) body = `<div class="eyebrow">Step 1 of 4</div><h2>What's your level now?</h2><p class="sub">Not sure? Choose your best guess. Your first three study days include a free placement test, and you can change this later.</p>
-    <div class="choices">${LEVELS.slice(0,4).map(l=>`<button class="choice" data-from="${l}" aria-pressed="${d.from===l}"><span class="code">${l}</span><span><b>${LEVEL_INFO[l].name}</b><span>${LEVEL_INFO[l].d}</span></span></button>`).join("")}</div>${nav()}`;
+  if (ob.step === 1) body = `<div class="eyebrow">Step 1 of 4</div><h2>What's your level now?</h2><p class="sub">Not sure? Take the quick level test and we'll work it out for you.</p>
+    <button class="choice" data-leveltest style="width:100%;border-style:dashed"><span class="code" style="background:var(--accent);color:var(--accent-ink)">?</span><span><b>Find my level</b><span>30 questions at most, about 10 minutes. Stops early once it has found your level.</span></span></button>
+    <div class="eyebrow" style="margin-top:18px;color:var(--muted)">Or choose it yourself</div>
+    <div class="choices" style="margin-top:8px">${LEVELS.slice(0,4).map(l=>`<button class="choice" data-from="${l}" aria-pressed="${d.from===l}"><span class="code">${l}</span><span><b>${LEVEL_INFO[l].name}</b><span>${LEVEL_INFO[l].d}</span></span></button>`).join("")}</div>${nav()}`;
   if (ob.step === 2){
     const opts = LEVELS.slice(LEVELS.indexOf(d.from)+1);
     if (!opts.includes(d.to)) d.to = opts[0];
@@ -228,6 +230,7 @@ function go(spec){ const i = spec.indexOf(":"); tab = i<0 ? spec : spec.slice(0,
 
 function render(){
   const tabsEl = document.getElementById("tabs"), meta = document.getElementById("meta"), v = document.getElementById("view");
+  if (lt){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vLevelTest(); return; }
   if (ob){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vOnboarding(); return; }
   tabsEl.innerHTML = TABS.map(([k,l]) => `<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join("");
   const rd = realDay();
@@ -346,7 +349,7 @@ function vProgress(){
   <label class="f">Reading %<input type="number" inputmode="numeric" min="0" max="100" id="ts-r"></label><label class="f">Listening %<input type="number" inputmode="numeric" min="0" max="100" id="ts-l"></label>
   <label class="f">Writing 1-5<input type="number" inputmode="numeric" min="1" max="5" id="ts-w"></label><label class="f">Speaking 1-5<input type="number" inputmode="numeric" min="1" max="5" id="ts-s"></label></div>
   <label class="f" style="margin-top:10px">Notes (e.g. EF SET level, recurring mistakes)<input id="ts-n"></label>
-  <div style="margin-top:12px"><button class="primary" data-addtest>Save result</button></div>
+  <div class="row" style="margin-top:12px"><button class="primary" data-addtest>Save result</button><button data-leveltest>Take the level test</button></div>
   ${tests.length?`<div class="tbl" style="margin-top:14px"><table><thead><tr><th>Date</th><th>Type</th><th>Read.</th><th>List.</th><th>Writ.</th><th>Speak.</th><th>Notes</th><th></th></tr></thead><tbody>${tests.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.type)}</td><td>${t.r!==""?esc(t.r)+"%":""}</td><td>${t.l!==""?esc(t.l)+"%":""}</td><td>${esc(t.w)}</td><td>${esc(t.s)}</td><td>${esc(t.n)}</td><td><button class="ghost" data-deltest="${t.id}" aria-label="Delete result">✕</button></td></tr>`).join("")}</tbody></table></div>`:""}</div>
   <div class="panel" style="margin-top:12px"><h3>Error notebook</h3><p class="muted small" style="margin:4px 0 12px">Log every recurring mistake with the corrected version. Reread it during your weekly review.</p><textarea id="errors" placeholder="I depend from my parents → I depend on my parents">${esc(S.errors)}</textarea></div>`;
 }
@@ -357,6 +360,7 @@ function vSettings(){
   return `<h2>Settings</h2><div class="stack" style="margin-top:14px">
   <div class="panel"><div class="spread"><div><h3>Your plan</h3><p class="muted small" style="margin:4px 0 0">${esc(p.name||"No name")} · ${p.from} → ${p.to} · ${p.minutes} min × ${p.days} days · ${p.exam==="none"?"no exam":p.exam==="ielts"?"IELTS":"Cambridge"} · starts ${fmt(startDate(),{day:"numeric",month:"short",year:"numeric"})}</p></div><button class="primary" data-edit>Change plan</button></div>
   <p class="muted small" style="margin:10px 0 0">Changing level, time or study days rebuilds the schedule and clears the daily ticks. Flashcards, drafts, test results and notes are kept.</p></div>
+  <div class="panel"><div class="spread"><div><h3>Level test</h3><p class="muted small" style="margin:4px 0 0">Check your level again at any time. The result is saved in Progress.</p></div><button data-leveltest>Take the test</button></div></div>
   <div class="panel"><h3>Install the app</h3><ul class="clean"><li><b>iPhone</b>: open this site in Safari, tap Share, then "Add to Home Screen".</li><li><b>Android</b>: open it in Chrome, tap the ⋮ menu, then "Install app".</li><li>After the first visit it works offline. Always open it from the icon: on iPhone, the installed app and Safari keep progress separately.</li></ul></div>
   <div class="panel"><h3>Backup and transfer</h3><p class="muted small" style="margin:4px 0 12px">Your progress lives on this device. To move it, generate a code, keep it somewhere safe (a note, an email to yourself) and paste it here on the new device.</p>
   <textarea id="bk" style="min-height:110px;font:12px var(--f-mono)"></textarea>
@@ -369,6 +373,8 @@ function vSettings(){
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const ds = b.dataset;
+  if (ds.lt){ ltClick(ds); return; }
+  if ("leveltest" in ds){ ltStart(ob ? "onboarding" : "app"); return; }
   if (ob){
     if (ds.ob === "next") return obNext();
     if (ds.ob === "back"){ ob.step = Math.max(0, ob.step-1); render(); return; }

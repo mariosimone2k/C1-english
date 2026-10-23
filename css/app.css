@@ -199,3 +199,4 @@ td .ex{color:var(--muted);font-size:13px}
   .brand .meta{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.choice:disabled{opacity:1;cursor:default;color:var(--ink)}
