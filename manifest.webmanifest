@@ -1,15 +1,24 @@
 {
-  "name": "Percorso C1 Inglese",
-  "short_name": "Percorso C1",
-  "description": "Programma di 16 settimane per arrivare al C1 di inglese.",
-  "lang": "it",
+  "name": "Ascent English",
+  "short_name": "Ascent",
+  "description": "A personalised day-by-day plan to move up the CEFR levels in English.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5f7",
-  "theme_color": "#c22a3d",
+  "theme_color": "#1b2c52",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

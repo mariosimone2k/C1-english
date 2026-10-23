@@ -1,6 +1,6 @@
 // Offline support: app files are cached on first visit and refreshed in the background.
-const CACHE = "percorso-c1-v2";
-const APP = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const CACHE = "ascent-v3";
+const APP = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "css/app.css", "js/stages.js", "js/b1.js", "js/b2.js", "js/c1.js", "js/c2.js", "js/app.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
