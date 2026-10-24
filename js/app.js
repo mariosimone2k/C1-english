@@ -102,6 +102,7 @@ const pick = (arr, i) => arr[i % arr.length];
 function examLink(st){
   const e = P().exam;
   if (e === "ielts") return link(EXAM.ielts[1], EXAM.ielts[0]);
+  if (e === "jflt") return link("https://www.nato.int/cps/en/natohq/news.htm", "NATO News") + " or " + link("https://www.bbc.co.uk/worldserviceradio", "BBC World Service");
   const c = EXAM.cambridge[st]; return link(c[1], "Cambridge " + c[0] + " sample tests");
 }
 
@@ -139,10 +140,17 @@ function focus(d, wk, dow, th){
   switch(code){
     case "G": return {title:(wk.review ? "Grammar review: " : "Grammar: ") + units, html:`<p>Study the explanation and examples, then do the exercises. Write ten sentences of your own using the structure.</p>`, act:[["Open the lesson","grammar:"+st+"-"+wk.g[0]]]};
     case "W1": return {title:"Writing: essay", html:`<p>Write ${wcount} words. Get feedback and rewrite the sentences that were wrong.</p><div class="quote">${esc(th.w1)}</div>`, act:[["Write it","write:"+st+"-"+wk.t[0]+"a"]]};
-    case "W2": return {title:"Writing: "+th.w2[0].toLowerCase(), html:`<p>Write ${wcount} words in the right register for the genre, then compare with a model answer.</p><div class="quote">${esc(th.w2[1])}</div>`, act:[["Write it","write:"+st+"-"+wk.t[0]+"b"]]};
-    case "S": return {title:"Conversation", html:`<p>Have a conversation with a tutor (${link(LINKS.italki,"italki")}) or a language exchange partner (${link(LINKS.tandem,"Tandem")}) about <b>${esc(th.t.toLowerCase())}</b>. Use at least five of this week's phrases. No partner? Answer all five questions aloud.</p><ul class="clean">${th.s.map(q=>`<li>${esc(q)}</li>`).join("")}</ul>`};
+    case "W2": if (P().exam === "jflt"){ const j = JFLT.writing[wi % JFLT.writing.length]; return {title:"JFLT writing: "+j[0].toLowerCase(), html:`<p>Write ${j[1]} by hand or on a computer, timed as in the exam (about 40 minutes per task). Check register, layout and organisation.</p><div class="quote">${esc(j[2])}</div>`, act:[["JFLT guide","exam"]]}; }
+      return {title:"Writing: "+th.w2[0].toLowerCase(), html:`<p>Write ${wcount} words in the right register for the genre, then compare with a model answer.</p><div class="quote">${esc(th.w2[1])}</div>`, act:[["Write it","write:"+st+"-"+wk.t[0]+"b"]]};
+    case "S": if (P().exam === "jflt"){ const lv = JFLT.roleLevel[st], rp = JFLT.roleplays[lv][wi % 5]; return {title:"JFLT speaking practice", html:`<p>Practise the three parts of the JFLT speaking test with a tutor (${link(LINKS.italki,"italki")}) or a partner, or alone by recording yourself.</p><ul class="clean"><li><b>Introduction</b>: two minutes about yourself, your job and your unit.</li><li><b>Role-play (level ${lv})</b>: ${esc(rp)}</li>${lv>=2?`<li><b>Discussion</b>: ${esc(JFLT.discussion[wi % JFLT.discussion.length])}</li>`:""}</ul>${lv>=3?`<p class="small muted">Level 3-4 tasks reward persuading, defending an opinion and negotiating.</p>`:""}`, act:[["JFLT guide","exam"]]}; }
+      return {title:"Conversation", html:`<p>Have a conversation with a tutor (${link(LINKS.italki,"italki")}) or a language exchange partner (${link(LINKS.tandem,"Tandem")}) about <b>${esc(th.t.toLowerCase())}</b>. Use at least five of this week's phrases. No partner? Answer all five questions aloud.</p><ul class="clean">${th.s.map(q=>`<li>${esc(q)}</li>`).join("")}</ul>`};
     case "V": return {title:"Vocabulary: "+th.t, html:`<p>Study this week's phrases. Write one sentence about your own life for each, then review them as flashcards.</p>`, act:[["Open vocabulary","vocab:"+st+"-"+wk.t[0]],["Flashcards","flash"]]};
     case "X":
+      if (P().exam === "jflt"){
+        if (wk.last || (wi+1) % 4 === 0) return {title: wk.last ? "JFLT mock: level check" : "JFLT mock: monthly check", html:`<p>Simulate the JFLT under time pressure: 15 listening items (about 25 minutes) and 15 reading items (about 30 minutes) from ${examLink(st)}, writing one question per text on the main idea, details or the author's purpose. Then write one JFLT task and record a two-minute talk. Estimate your level for each skill and log it in Progress as an SLP (Listening, Speaking, Reading, Writing).</p>`, act:[["Record results","progress"],["JFLT guide","exam"]]};
+        return wi%2 ? {title:"JFLT listening drill", html:`<p>Listen to five short news items and one longer interview or briefing from ${examLink(st)}. For each, note the main idea, two details and, for the longer one, the speaker's attitude. Listen once before checking a transcript, as you would in the test.</p>`, act:[["JFLT guide","exam"]]}
+          : {title:"JFLT reading drill", html:`<p>In 30 minutes read five short texts (notices, news, instructions) and one long article from ${examLink(st)}. For each, write the main idea in one sentence; for the long one, also the writer's purpose and tone. Higher JFLT levels test inference, not just facts.</p>`, act:[["JFLT guide","exam"]]};
+      }
       if (wk.last) return {title:"Level check: "+st, html:`<p>Full mock test under exam conditions from ${examLink(st)}: Reading, Listening, an essay and a two-minute recording. Aim for 70-75% or more before moving on. Record the results in Progress.</p>`, act:[["Record results","progress"]]};
       if ((wi+1) % 4 === 0) return {title:"Monthly progress check", html:`<p>Timed Reading and Listening parts from ${examLink(st)}, plus a two-minute recording on the same question as your placement test. Record the results in Progress.</p>`, act:[["Record results","progress"]]};
       return {title: wi%2 ? "Exam practice: Listening" : "Exam practice: Reading", html:`<p>Do one ${wi%2?"Listening":"Reading"} part under timed conditions from ${examLink(st)}. For every mistake, work out why the right answer is right.</p>`};
@@ -164,11 +172,14 @@ function deck(){
       th.v.forEach((v,i) => out.push({id:`${wk.stage}-${t}-${i}`, en:v[0], it:v[1], ex:v[2], src:th.t}));
     });
   }
+  if (P().exam === "jflt") jfltUnlocked().forEach(k => JFLT.themes[k].v.forEach((v,i) => out.push({id:`J-${k}-${i}`, en:v[0], it:v[1], ex:v[2], src:JFLT.themes[k].t})));
   S.custom.forEach(c => out.push({id:"c"+c.id, en:c.en, it:c.it, ex:c.ex||"", src:"Your cards"}));
   return out;
 }
 function dueCards(){ const t = iso(today()); return deck().filter(c => { const s = S.cards[c.id]; return !s || s.due <= t; }); }
 let fc = {queue:null, shown:false};
+function jfltWeek(k){ return Math.floor(k * PLAN.weeks.length / JFLT.themes.length) + 1; }
+function jfltUnlocked(){ const w = Math.floor((curDay()-1)/7)+1; return JFLT.themes.map((_,k)=>k).filter(k => jfltWeek(k) <= w); }
 
 /* ---------- onboarding ---------- */
 let ob = null;
@@ -200,7 +211,7 @@ function vOnboarding(){
     <div class="eyebrow" style="margin-top:18px;color:var(--muted)">Study days per week</div>
     <div class="choices cols">${[5,6,7].map(n=>`<button class="choice simple" data-days="${n}" aria-pressed="${d.days===n}"><b>${n} days</b><span>${n===7?"every day":n===6?"Sunday off":"weekends off"}</span></button>`).join("")}</div>${nav()}`;
   if (ob.step === 4) body = `<div class="eyebrow">Step 4 of 4</div><h2>Are you preparing for an exam?</h2><p class="sub">This decides which practice tests the plan links to.</p>
-    <div class="choices">${[["cambridge","Cambridge English","B1 Preliminary, B2 First, C1 Advanced, C2 Proficiency"],["ielts","IELTS","Academic or General Training"],["none","No exam","Practice tests are still used to measure progress"]].map(e=>`<button class="choice" data-exam="${e[0]}" aria-pressed="${d.exam===e[0]}"><span class="code">${e[0]==="none"?"–":e[0][0].toUpperCase()}</span><span><b>${e[1]}</b><span>${e[2]}</span></span></button>`).join("")}</div>
+    <div class="choices">${[["cambridge","Cambridge English","B1 Preliminary, B2 First, C1 Advanced, C2 Proficiency"],["ielts","IELTS","Academic or General Training"],["jflt","JFLT","Italian Defence test on NATO STANAG 6001 levels"],["none","No exam","Practice tests are still used to measure progress"]].map(e=>`<button class="choice" data-exam="${e[0]}" aria-pressed="${d.exam===e[0]}"><span class="code">${e[0]==="none"?"–":e[0]==="jflt"?"J":e[0][0].toUpperCase()}</span><span><b>${e[1]}</b><span>${e[2]}</span></span></button>`).join("")}</div>
     <label class="f" style="margin-top:18px">Start date<input type="date" id="ob-start" value="${esc(d.start)}"></label>${nav("See my plan")}`;
   if (ob.step === 5){
     const plan = buildPlan(d), ms = milestones(plan, parse(d.start)), first = ms[0], hours = Math.round(plan.weeks.length*d.minutes*d.days/60);
@@ -213,6 +224,7 @@ function vOnboarding(){
     <p class="sub">${ms.length>1 ? `Then on to ${esc(d.to)}, one level at a time. Each level is a real achievement in itself.` : `That's your goal level.`} You'll notice progress long before the finish line.</p>
     <div class="track">${LEVELS.map(l=>`<div class="seg ${l===d.from?"start":""} ${plan.stages.includes(l)?"in":""}">${l}</div>`).join("")}</div>
     <div class="milestones">${ms.map((m,i)=>`<div class="ms"><span class="code">${m.stage}</span><span><b>${LEVEL_INFO[m.stage].name}</b><span>${i===0?"in "+dur(m.weeks):dur(m.weeks)+" more"} · by ${fmt(m.date,{month:"long",year:"numeric"})}</span></span></div>`).join("")}</div>
+    ${d.exam==="jflt"?`<p class="small" style="margin:12px 0 0"><span class="pill accent">JFLT</span> ${esc(d.to)} corresponds roughly to STANAG 6001 level ${JFLT.slp[d.to]} in each skill.</p>`:""}
     <p class="small muted" style="margin:12px 0 0">${mins(d.minutes)} a day, ${d.days} days a week: about ${hours} hours in total, starting ${fmt(parse(d.start),{day:"numeric",month:"short"})}.</p>
     ${alts.length ? `<div class="panel" style="margin-top:16px"><h3>Want to get there sooner?</h3><p class="muted small" style="margin:4px 0 10px">Tap an option to switch to it.</p><div class="choices" style="margin-top:0">${alts.map(([m,dd])=>{ const w = buildPlan(Object.assign({}, d, {minutes:m, days:dd})).weeks.length, saved = plan.weeks.length - w; return `<button class="choice simple" data-whatif="${m},${dd}"><b>${mins(m)} × ${dd} days → ${esc(d.to)} in ${dur(w)}</b><span>${dur(saved)} sooner</span></button>`; }).join("")}</div></div>` : ""}
     ${nav(S.profile ? "Save changes" : "Start my plan")}`;
@@ -233,7 +245,7 @@ function obNext(){
 }
 
 /* ---------- views ---------- */
-const TABS = [["today","Today"],["plan","Plan"],["flash","Flashcards"],["grammar","Grammar"],["vocab","Vocabulary"],["write","Writing"],["progress","Progress"],["settings","Settings"]];
+const TABS = [["today","Today"],["plan","Plan"],["flash","Flashcards"],["grammar","Grammar"],["vocab","Vocabulary"],["write","Writing"],["exam","JFLT"],["progress","Progress"],["settings","Settings"]];
 let tab = "today", param = null, viewDay = 1;
 try { const h = location.hash.slice(1); if (TABS.some(t => t[0]===h)) tab = h; } catch(e) {}
 
@@ -243,10 +255,10 @@ function render(){
   const tabsEl = document.getElementById("tabs"), meta = document.getElementById("meta"), v = document.getElementById("view");
   if (lt){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vLevelTest(); return; }
   if (ob){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vOnboarding(); return; }
-  tabsEl.innerHTML = TABS.map(([k,l]) => `<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join("");
+  tabsEl.innerHTML = TABS.filter(t => t[0] !== "exam" || P().exam === "jflt").map(([k,l]) => `<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join("");
   const rd = realDay();
   meta.textContent = rd < 1 ? `Starts ${fmt(startDate(),{day:"numeric",month:"short"})}` : rd > PLAN.days ? "Plan complete" : `Day ${curDay()} of ${PLAN.days}`;
-  v.innerHTML = ({today:vToday, plan:vPlan, flash:vFlash, grammar:vGrammar, vocab:vVocab, write:vWrite, progress:vProgress, settings:vSettings})[tab]();
+  v.innerHTML = ({today:vToday, plan:vPlan, flash:vFlash, grammar:vGrammar, vocab:vVocab, write:vWrite, exam:vExam, progress:vProgress, settings:vSettings})[tab]();
   if (tab === "grammar" && param){ const el = document.getElementById("u-"+param); if (el){ el.open = true; el.scrollIntoView({block:"start"}); } }
 }
 
@@ -323,9 +335,9 @@ const norm = s => s.toLowerCase().replace(/[’‘]/g,"'").replace(/[.,;:!?"]/g,
 function vVocab(){
   const wk = weekOf(curDay());
   const [st, ti] = param ? [param.split("-")[0], +param.split("-")[1]] : [wk.stage, wk.t[0]];
-  const th = STAGES[st].themes[ti];
+  const th = st === "J" ? JFLT.themes[ti] : STAGES[st].themes[ti];
   return `<h2>Vocabulary</h2><p class="sub">${th.v.length} phrases per theme, already in your flashcard deck when their week starts. Always learn the whole phrase.</p>
-  <label class="f" style="max-width:420px;margin-bottom:14px">Theme<select id="vsel">${PLAN.stages.map(s=>`<optgroup label="${s}">${STAGES[s].themes.map((t,i)=>`<option value="${s}-${i}" ${s===st&&i===ti?"selected":""}>Week ${weekOfUnit(s,"t",i)}: ${esc(t.t)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+  <label class="f" style="max-width:420px;margin-bottom:14px">Theme<select id="vsel">${PLAN.stages.map(s=>`<optgroup label="${s}">${STAGES[s].themes.map((t,i)=>`<option value="${s}-${i}" ${s===st&&i===ti?"selected":""}>Week ${weekOfUnit(s,"t",i)}: ${esc(t.t)}</option>`).join("")}</optgroup>`).join("")}${P().exam==="jflt"?`<optgroup label="JFLT">${JFLT.themes.map((t,i)=>`<option value="J-${i}" ${st==="J"&&i===ti?"selected":""}>Week ${jfltWeek(i)}: ${esc(t.t.replace("JFLT · ",""))}</option>`).join("")}</optgroup>`:""}</select></label>
   <div class="panel"><div class="tbl"><table><thead><tr><th>Phrase</th><th>Italian</th></tr></thead><tbody>${th.v.map(v=>`<tr><td><b>${esc(v[0])}</b><div class="ex">${esc(v[2])}</div></td><td>${esc(v[1])}</td></tr>`).join("")}</tbody></table></div></div>
   <p class="muted small">Hear any phrase in real context on ${link(LINKS.youglish,"YouGlish")}.</p>`;
 }
@@ -358,7 +370,7 @@ function vProgress(){
   return `<h2>Progress</h2><p class="sub">You're ready for the next level when you score 70-75% or more in Reading and Listening at that level and get 4 or 5 out of 5 for writing and speaking.</p>
   <div class="stats"><div class="stat"><b>${full}</b><span>days completed</span></div><div class="stat"><b>${streak}</b><span>study-day streak</span></div><div class="stat"><b>${learned}</b><span>phrases learned</span></div><div class="stat"><b>${texts}</b><span>texts written</span></div></div>
   <div class="panel"><h3>Test results</h3><p class="muted small" style="margin:4px 0 12px">Placement test in week 1, then a check every four weeks and a mock exam at the end of each level. Rate writing and speaking from 1 to 5.</p>
-  <div class="formrow"><label class="f">Date<input type="date" id="ts-date" value="${iso(today())}"></label><label class="f">Type<select id="ts-type"><option>Placement</option><option>Monthly check</option><option>Level check</option><option>EF SET</option><option>Mock exam</option></select></label>
+  <div class="formrow"><label class="f">Date<input type="date" id="ts-date" value="${iso(today())}"></label><label class="f">Type<select id="ts-type"><option>Placement</option><option>Monthly check</option><option>Level check</option><option>EF SET</option><option>Mock exam</option><option>JFLT mock (SLP)</option></select></label>
   <label class="f">Reading %<input type="number" inputmode="numeric" min="0" max="100" id="ts-r"></label><label class="f">Listening %<input type="number" inputmode="numeric" min="0" max="100" id="ts-l"></label>
   <label class="f">Writing 1-5<input type="number" inputmode="numeric" min="1" max="5" id="ts-w"></label><label class="f">Speaking 1-5<input type="number" inputmode="numeric" min="1" max="5" id="ts-s"></label></div>
   <label class="f" style="margin-top:10px">Notes (e.g. EF SET level, recurring mistakes)<input id="ts-n"></label>
@@ -367,11 +379,21 @@ function vProgress(){
   <div class="panel" style="margin-top:12px"><h3>Error notebook</h3><p class="muted small" style="margin:4px 0 12px">Log every recurring mistake with the corrected version. Reread it during your weekly review.</p><textarea id="errors" placeholder="I depend from my parents → I depend on my parents">${esc(S.errors)}</textarea></div>`;
 }
 
+function vExam(){
+  const p = P(), rows = [["Listening","60 multiple-choice items in 4 sections of 15, about 90 minutes"],["Reading","60 multiple-choice items in 4 sections of 15, 120 minutes"],["Writing","3 tasks in 2 hours: a note or message (50-100 words), an essay, report or formal letter (150-250), a composition (250-500, choice of 3 topics)"],["Speaking","15-30 minutes: introduction, role-play at level 1, 2 or 3, then a discussion on professional or current topics"]];
+  return `<h2>JFLT preparation</h2><p class="sub">The Joint Forces Language Test certifies English for Italian Defence personnel on NATO STANAG 6001 levels, skill by skill. Your plan adds JFLT-style writing tasks, speaking role-plays, timed reading and listening drills and defence vocabulary.</p>
+  <div class="stack"><div class="panel"><h3>Test format</h3><div class="tbl"><table><tbody>${rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td></tr>`).join("")}</tbody></table></div></div>
+  <div class="panel"><h3>How the levels are scored</h3><ul class="clean"><li>Listening and reading sections get harder: section 1 is level 1, section 2 level 2, sections 3-4 levels 3 and 4.</li><li>In each section of 15: <b>10 or more</b> correct gives that level and you move on; <b>7-9</b> gives the previous level with a "+"; <b>6 or fewer</b> keeps the previous level.</li><li>The result is a Standard Language Profile (SLP) in the order Listening, Speaking, Reading, Writing, for example <b>SLP 3,3,3+,2+</b>. A 0 in any skill means failing.</li></ul></div>
+  <div class="panel"><h3>Your target</h3><p style="margin:6px 0 0">Your goal of <b>${esc(p.to)}</b> corresponds roughly to STANAG 6001 level <b>${JFLT.slp[p.to]}</b> in each skill. The match between CEFR and STANAG is approximate: use the monthly JFLT mocks to track each skill separately.</p></div>
+  <div class="panel"><h3>Tips</h3><ul class="clean"><li>Practise reading under time pressure: 120 minutes for 60 items is about 2 minutes per text.</li><li>At levels 3 and 4, questions test inference, purpose and tone, not just facts.</li><li>In speaking, level 3 needs you to support opinions and handle unexpected complications; level 4 to persuade and negotiate.</li><li>Follow defence and international news in English every day: it is the core of the higher-level texts.</li></ul></div>
+  <p class="muted small">Format based on the Italian Defence directive ${link(JFLT.source,"SMD-FORM-004")}. Official test papers are not public, so the drills use real news sources.</p></div>`;
+}
+
 let confirmReset = false;
 function vSettings(){
   const p = P();
   return `<h2>Settings</h2><div class="stack" style="margin-top:14px">
-  <div class="panel"><div class="spread"><div><h3>Your plan</h3><p class="muted small" style="margin:4px 0 0">${esc(p.name||"No name")} · ${p.from} → ${p.to} · ${p.minutes} min × ${p.days} days · ${p.exam==="none"?"no exam":p.exam==="ielts"?"IELTS":"Cambridge"} · starts ${fmt(startDate(),{day:"numeric",month:"short",year:"numeric"})}</p></div><button class="primary" data-edit>Change plan</button></div>
+  <div class="panel"><div class="spread"><div><h3>Your plan</h3><p class="muted small" style="margin:4px 0 0">${esc(p.name||"No name")} · ${p.from} → ${p.to} · ${p.minutes} min × ${p.days} days · ${p.exam==="none"?"no exam":p.exam==="ielts"?"IELTS":p.exam==="jflt"?"JFLT":"Cambridge"} · starts ${fmt(startDate(),{day:"numeric",month:"short",year:"numeric"})}</p></div><button class="primary" data-edit>Change plan</button></div>
   <p class="muted small" style="margin:10px 0 0">Changing level, time or study days rebuilds the schedule and clears the daily ticks. Flashcards, drafts, test results and notes are kept.</p></div>
   <div class="panel"><div class="spread"><div><h3>Level test</h3><p class="muted small" style="margin:4px 0 0">Check your level again at any time. The result is saved in Progress.</p></div><button data-leveltest>Take the test</button></div></div>
   <div class="panel"><h3>Install the app</h3><ul class="clean"><li><b>iPhone</b>: open this site in Safari, tap Share, then "Add to Home Screen".</li><li><b>Android</b>: open it in Chrome, tap the ⋮ menu, then "Install app".</li><li>After the first visit it works offline. Always open it from the icon: on iPhone, the installed app and Safari keep progress separately.</li></ul></div>
