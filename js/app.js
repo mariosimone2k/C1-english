@@ -41,7 +41,7 @@ const DOW = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sund
 const KEY = "percorso-c1.v1";
 
 /* ---------- state ---------- */
-const blank = () => ({profile:null, start:null, done:{}, cards:{}, custom:[], drafts:{}, tests:[], errors:"", reverse:false});
+const blank = () => ({profile:null, start:null, done:{}, cards:{}, custom:[], drafts:{}, tests:[], errors:"", reverse:false, lessons:{}});
 let S = blank();
 try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch(e) {}
 // Earlier version: C1-only cards were stored as "t3-5".
@@ -138,7 +138,7 @@ function focus(d, wk, dow, th){
   const code = ROTATION[P().days][studyIdx];
   const units = wk.g.map(i => g[i].t).join(" + ");
   switch(code){
-    case "G": return {title:(wk.review ? "Grammar review: " : "Grammar: ") + units, html:`<p>Study the explanation and examples, then do the exercises. Write ten sentences of your own using the structure.</p>`, act:[["Open the lesson","grammar:"+st+"-"+wk.g[0]]]};
+    case "G": return {title:(wk.review ? "Grammar review: " : "Grammar: ") + units, html:`<p>Take the guided lesson: it explains the structure step by step, checks every answer and brings your mistakes back until you get them right. Then write ten sentences of your own using it.</p>`, act:[["Teach me","teach:"+st+"-"+wk.g[0]],["Read the lesson","grammar:"+st+"-"+wk.g[0]]]};
     case "W1": return {title:"Writing: essay", html:`<p>Write ${wcount} words. Get feedback and rewrite the sentences that were wrong.</p><div class="quote">${esc(th.w1)}</div>`, act:[["Write it","write:"+st+"-"+wk.t[0]+"a"]]};
     case "W2": if (P().exam === "jflt"){ const j = JFLT.writing[wi % JFLT.writing.length]; return {title:"JFLT writing: "+j[0].toLowerCase(), html:`<p>Write ${j[1]} by hand or on a computer, timed as in the exam (about 40 minutes per task). Check register, layout and organisation.</p><div class="quote">${esc(j[2])}</div>`, act:[["JFLT guide","exam"]]}; }
       return {title:"Writing: "+th.w2[0].toLowerCase(), html:`<p>Write ${wcount} words in the right register for the genre, then compare with a model answer.</p><div class="quote">${esc(th.w2[1])}</div>`, act:[["Write it","write:"+st+"-"+wk.t[0]+"b"]]};
@@ -245,20 +245,21 @@ function obNext(){
 }
 
 /* ---------- views ---------- */
-const TABS = [["today","Today"],["plan","Plan"],["flash","Flashcards"],["grammar","Grammar"],["vocab","Vocabulary"],["write","Writing"],["exam","JFLT"],["progress","Progress"],["settings","Settings"]];
+const TABS = [["today","Today"],["teach","Teach me"],["plan","Plan"],["flash","Flashcards"],["grammar","Grammar"],["vocab","Vocabulary"],["write","Writing"],["exam","JFLT"],["progress","Progress"],["settings","Settings"]];
 let tab = "today", param = null, viewDay = 1;
 try { const h = location.hash.slice(1); if (TABS.some(t => t[0]===h)) tab = h; } catch(e) {}
 
-function go(spec){ const i = spec.indexOf(":"); tab = i<0 ? spec : spec.slice(0,i); param = i<0 ? null : spec.slice(i+1); if (tab==="flash") fc.queue = null; render(); window.scrollTo(0,0); }
+function go(spec){ if (spec.startsWith("teach:")){ const [st,u] = spec.slice(6).split("-"); teachStart(st, +u); return; } const i = spec.indexOf(":"); tab = i<0 ? spec : spec.slice(0,i); param = i<0 ? null : spec.slice(i+1); if (tab==="flash") fc.queue = null; render(); window.scrollTo(0,0); }
 
 function render(){
   const tabsEl = document.getElementById("tabs"), meta = document.getElementById("meta"), v = document.getElementById("view");
+  if (tc){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vTeach(); setTimeout(() => document.getElementById("tc-in")?.focus(), 0); return; }
   if (lt){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vLevelTest(); return; }
   if (ob){ tabsEl.innerHTML = ""; meta.textContent = ""; v.innerHTML = vOnboarding(); return; }
   tabsEl.innerHTML = TABS.filter(t => t[0] !== "exam" || P().exam === "jflt").map(([k,l]) => `<button role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}</button>`).join("");
   const rd = realDay();
   meta.textContent = rd < 1 ? `Starts ${fmt(startDate(),{day:"numeric",month:"short"})}` : rd > PLAN.days ? "Plan complete" : `Day ${curDay()} of ${PLAN.days}`;
-  v.innerHTML = ({today:vToday, plan:vPlan, flash:vFlash, grammar:vGrammar, vocab:vVocab, write:vWrite, exam:vExam, progress:vProgress, settings:vSettings})[tab]();
+  v.innerHTML = ({today:vToday, plan:vPlan, flash:vFlash, grammar:vGrammar, vocab:vVocab, write:vWrite, teach:vTeachList, exam:vExam, progress:vProgress, settings:vSettings})[tab]();
   if (tab === "grammar" && param){ const el = document.getElementById("u-"+param); if (el){ el.open = true; el.scrollIntoView({block:"start"}); } }
 }
 
@@ -325,7 +326,8 @@ function vFlash(){
 function weekOfUnit(st, kind, i){ const w = PLAN.weeks.findIndex(wk => wk.stage===st && wk[kind].includes(i)); return w+1; }
 function vGrammar(){
   return `<h2>Grammar</h2><p class="sub">One structure per week, studied on the first study day and reviewed at the end of the week. Type your answer and press Check; common variants are accepted.</p>` +
-  PLAN.stages.map(st => `<div class="stage-h"><h3>${st} · ${LEVEL_INFO[st].name}</h3></div>` + STAGES[st].grammar.map((g,u) => `<details class="unit" id="u-${st}-${u}"><summary>${esc(g.t)}<span class="n">Week ${weekOfUnit(st,"g",u)}</span></summary>
+  PLAN.stages.map(st => `<div class="stage-h"><h3>${st} · ${LEVEL_INFO[st].name}</h3></div>` + STAGES[st].grammar.map((g,u) => `<details class="unit" id="u-${st}-${u}"><summary>${esc(g.t)}${S.lessons?.[st+"-"+u]?` <span class="pill ok">✓ ${S.lessons[st+"-"+u].score}/${S.lessons[st+"-"+u].total}</span>`:""}<span class="n">Week ${weekOfUnit(st,"g",u)}</span></summary>
+    <div style="margin:10px 0 4px"><button class="primary" data-teach="${st}-${u}">Teach me this</button></div>
     <ul class="clean">${g.e.map(e=>`<li>${e}</li>`).join("")}</ul>
     <div class="eyebrow" style="margin-top:12px">Examples</div><ul class="clean">${g.x.map(x=>`<li><i>${esc(x)}</i></li>`).join("")}</ul>
     <div class="eyebrow" style="margin-top:12px">Practice</div><div class="ex-list">${g.q.map((q,i)=>`<div class="exq"><div>${i+1}. ${esc(q[0])}</div><div class="r"><input id="g-${st}-${u}-${i}" aria-label="Answer ${i+1}" autocomplete="off" autocapitalize="off"><button data-check-ex="${st}-${u}-${i}">Check</button></div><div class="fb" id="fb-${st}-${u}-${i}"></div></div>`).join("")}</div></details>`).join("")).join("");
@@ -379,6 +381,17 @@ function vProgress(){
   <div class="panel" style="margin-top:12px"><h3>Error notebook</h3><p class="muted small" style="margin:4px 0 12px">Log every recurring mistake with the corrected version. Reread it during your weekly review.</p><textarea id="errors" placeholder="I depend from my parents → I depend on my parents">${esc(S.errors)}</textarea></div>`;
 }
 
+function vTeachList(){
+  const wk = weekOf(curDay()), cur = wk.stage + "-" + wk.g[0];
+  const done = Object.keys(S.lessons || {}).length;
+  const row = (st,u) => { const k = st+"-"+u, L = S.lessons?.[k], g = STAGES[st].grammar[u];
+    return `<button class="choice" data-teach="${k}" style="${k===cur?"border-color:var(--accent)":""}"><span class="code">${L?"✓":weekOfUnit(st,"g",u)}</span><span><b>${esc(g.t)}</b><span>${k===cur?"This week's lesson · ":""}${L?`Last score ${L.score}/${L.total} on ${fmt(parse(L.date),{day:"numeric",month:"short"})}`:`Week ${weekOfUnit(st,"g",u)} · about 15 minutes`}</span></span></button>`; };
+  return `<h2>Teach me</h2><p class="sub">Guided lessons that work like a tutor: a warm-up on the last topic, the rule explained one point at a time, examples, practice with instant feedback, a vocabulary quiz and a short writing task. Mistakes come back until you get them right and go into your error notebook.</p>
+  <div class="panel" style="border-color:var(--accent)"><div class="spread"><div><div class="eyebrow">Up next</div><h3 style="margin-top:4px">${esc(STAGES[wk.stage].grammar[wk.g[0]].t)}</h3></div><button class="primary" data-teach="${cur}">Start lesson</button></div></div>
+  <p class="muted small" style="margin:14px 0 4px">${done} lesson${done===1?"":"s"} completed</p>
+  ${PLAN.stages.map(st => `<div class="stage-h"><h3>${st} · ${LEVEL_INFO[st].name}</h3></div><div class="choices" style="margin-top:0">${STAGES[st].grammar.map((_,u)=>row(st,u)).join("")}</div>`).join("")}`;
+}
+
 function vExam(){
   const p = P(), rows = [["Listening","60 multiple-choice items in 4 sections of 15, about 90 minutes"],["Reading","60 multiple-choice items in 4 sections of 15, 120 minutes"],["Writing","3 tasks in 2 hours: a note or message (50-100 words), an essay, report or formal letter (150-250), a composition (250-500, choice of 3 topics)"],["Speaking","15-30 minutes: introduction, role-play at level 1, 2 or 3, then a discussion on professional or current topics"]];
   return `<h2>JFLT preparation</h2><p class="sub">The Joint Forces Language Test certifies English for Italian Defence personnel on NATO STANAG 6001 levels, skill by skill. Your plan adds JFLT-style writing tasks, speaking role-plays, timed reading and listening drills and defence vocabulary.</p>
@@ -408,6 +421,8 @@ function vSettings(){
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const ds = b.dataset;
+  if (ds.tc){ teachClick(ds); return; }
+  if (ds.teach){ const [st,u] = ds.teach.split("-"); teachStart(st, +u); return; }
   if (ds.lt){ ltClick(ds); return; }
   if ("leveltest" in ds){ ltStart(ob ? "onboarding" : "app"); return; }
   if (ob){
@@ -471,6 +486,7 @@ document.addEventListener("change", e => {
   if (t.dataset.check){ if (t.checked) S.done[t.dataset.check] = 1; else delete S.done[t.dataset.check]; save(); render(); }
   if (t.id === "vsel" || t.id === "wsel"){ param = t.value; render(); }
 });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "tc-in"){ e.preventDefault(); document.querySelector('[data-tc="check"]')?.click(); } else if (e.key === "Enter" && e.target.id && e.target.id.startsWith("g-")){ e.preventDefault(); e.target.nextElementSibling?.click(); } });
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.id === "draft"){ S.drafts[t.dataset.key] = t.value; if (!t.value.trim()) delete S.drafts[t.dataset.key]; save(); document.getElementById("wc").textContent = words(t.value) + " words"; }

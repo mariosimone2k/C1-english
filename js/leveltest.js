@@ -79,7 +79,7 @@ function vLevelTest(){
   const b = LT_BANDS[lt.band], q = LT_Q[b][lt.i];
   return `<div class="ob"><div class="spread"><div class="eyebrow">Level test · question ${lt.band*6+lt.i+1}</div><button class="ghost" data-lt="close">Quit</button></div>
     <div class="bar"><i style="width:${n/total*100}%"></i></div>
-    <h2 style="margin-top:8px">${esc(q[0]).replace("___","<span style=\"color:var(--accent)\">_____</span>")}</h2>
+    <h2 style="margin-top:8px">${esc(q[0]).replace(/___/g,"<span style=\"color:var(--accent)\">_____</span>")}</h2>
     <div class="choices">${q[1].map((o,k)=>{ let st = ""; if (lt.picked!==null){ if (k===q[2]) st = "border-color:var(--ok);background:var(--ok-soft)"; else if (k===lt.picked) st = "border-color:var(--accent);background:var(--accent-soft)"; }
       return `<button class="choice simple" style="${st}" data-lt="ans" data-k="${k}" ${lt.picked!==null?"disabled":""}><b>${esc(o)}</b></button>`; }).join("")}</div>
     <div style="display:flex;justify-content:flex-end;margin-top:18px">${lt.picked!==null?`<button class="primary" data-lt="next">Next</button>`:`<span class="muted small">Choose one answer. Don't guess wildly: "I don't know" is better than luck.</span>`}</div>
